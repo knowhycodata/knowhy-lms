@@ -201,6 +201,7 @@
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+**Anladığınız üzere readme sayfasını yapay zekaya yaptırdık. Haliyle gerçek görüntüler yerine bunları verdi :D
 
 ---
 

@@ -128,10 +128,10 @@ export default function ProfilePage() {
     const handleAvatarUpload = async (file: File) => {
         try {
             const formData = new FormData()
-            formData.append('thumbnail', file)
+            formData.append('avatar', file)
 
             const token = localStorage.getItem('token')
-            const response = await fetch(`${API_URL}/upload/thumbnail`, {
+            const response = await fetch(`${API_URL}/upload/avatar`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,

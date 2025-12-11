@@ -19,6 +19,7 @@ import InstructorDashboard from './pages/InstructorDashboard'
 import InstructorCourseForm from './pages/InstructorCourseForm'
 import InstructorStudentsPage from './pages/InstructorStudentsPage'
 import AdminReportsPage from './pages/AdminReportsPage'
+import AdminCoursesPage from './pages/AdminCoursesPage'
 import ProfilePage from './pages/ProfilePage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -131,6 +132,7 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="courses" element={<AdminCoursesPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
             <Route path="settings" element={<SystemSettingsPage />} />
           </Route>

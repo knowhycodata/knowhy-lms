@@ -113,7 +113,8 @@ router.post(
     try {
       const validation = bulkCourseSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new BadRequestError(validation.error.errors[0].message);
+        const errorMessages = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+        throw new BadRequestError(errorMessages);
       }
 
       const course = await bulkCourseService.createCourseWithContent(
@@ -140,7 +141,8 @@ router.put(
     try {
       const validation = bulkCourseSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new BadRequestError(validation.error.errors[0].message);
+        const errorMessages = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+        throw new BadRequestError(errorMessages);
       }
 
       const course = await bulkCourseService.updateCourseWithContent(

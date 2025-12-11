@@ -83,20 +83,31 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
     'src',
   ];
 
-  const sanitize = (obj: Record<string, unknown>, parentKey: string = ''): Record<string, unknown> => {
+  const sanitize = (obj: unknown, parentKey: string = ''): unknown => {
+    // Array'leri koru - her elemanı ayrı ayrı sanitize et
+    if (Array.isArray(obj)) {
+      return obj.map((item, index) => sanitize(item, `${parentKey}[${index}]`));
+    }
+
+    // Object değilse veya null ise olduğu gibi döndür
+    if (typeof obj !== 'object' || obj === null) {
+      return obj;
+    }
+
+    // Object ise her key'i işle
     const sanitized: Record<string, unknown> = {};
-    for (const key in obj) {
+    for (const key in obj as Record<string, unknown>) {
+      const value = (obj as Record<string, unknown>)[key];
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
       // Hariç tutulan alanları atla
       if (excludeFields.includes(key)) {
-        sanitized[key] = obj[key];
+        sanitized[key] = value;
         continue;
       }
 
-      if (typeof obj[key] === 'string') {
+      if (typeof value === 'string') {
         // URL olup olmadığını kontrol et
-        const value = obj[key] as string;
         if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) {
           // URL'leri olduğu gibi bırak
           sanitized[key] = value;
@@ -106,10 +117,13 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
         }
-      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-        sanitized[key] = sanitize(obj[key] as Record<string, unknown>, fullKey);
+      } else if (Array.isArray(value)) {
+        // Array'leri koru
+        sanitized[key] = sanitize(value, fullKey);
+      } else if (typeof value === 'object' && value !== null) {
+        sanitized[key] = sanitize(value, fullKey);
       } else {
-        sanitized[key] = obj[key];
+        sanitized[key] = value;
       }
     }
     return sanitized;

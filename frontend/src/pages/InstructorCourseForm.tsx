@@ -89,28 +89,29 @@ export default function InstructorCourseForm() {
 
     setSaving(true)
     try {
-      // Bulk API için veri hazırla
+      const modulesArray = Array.from(modules).map((m, mIndex) => ({
+        id: m.id || undefined,
+        title: m.title,
+        description: m.description || undefined,
+        order: mIndex,
+        lessons: Array.from(m.lessons).map((l, lIndex) => ({
+          id: l.id || undefined,
+          title: l.title,
+          description: l.description || undefined,
+          videoType: l.videoType,
+          videoUrl: l.videoUrl,
+          duration: l.duration || 0,
+          thumbnailUrl: l.thumbnailUrl || undefined,
+          order: lIndex,
+        })),
+      }));
+
       const bulkData = {
         title: course.title,
         description: course.description || undefined,
         thumbnail: course.thumbnail || undefined,
         isPublished: course.isPublished,
-        modules: modules.map((m, mIndex) => ({
-          id: m.id || undefined,
-          title: m.title,
-          description: m.description || undefined,
-          order: mIndex,
-          lessons: m.lessons.map((l, lIndex) => ({
-            id: l.id || undefined,
-            title: l.title,
-            description: l.description || undefined,
-            videoType: l.videoType,
-            videoUrl: l.videoUrl,
-            duration: l.duration || 0,
-            thumbnailUrl: l.thumbnailUrl || undefined,
-            order: lIndex,
-          })),
-        })),
+        modules: modulesArray,
       };
 
       // Tek istekte tüm veriyi kaydet (Transaction ile atomic)
@@ -123,7 +124,7 @@ export default function InstructorCourseForm() {
       navigate('/instructor')
     } catch (e: any) {
       console.error(e)
-      const errorMessage = e.response?.data?.error || 'Kaydetme hatası oluştu'
+      const errorMessage = e.message || e.response?.data?.error || 'Kaydetme hatası oluştu'
       showToast.error(errorMessage)
     }
     finally { setSaving(false) }

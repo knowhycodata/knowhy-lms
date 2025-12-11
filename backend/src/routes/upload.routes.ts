@@ -271,6 +271,97 @@ router.post(
   }
 );
 
+// ==================== AVATAR UPLOAD (TÜM KULLANICILAR) ====================
+
+// Avatar klasörü
+const avatarsDir = path.join(uploadPath, 'avatars');
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const secureFilename = generateSecureFilename('avatar', ext);
+    cb(null, secureFilename);
+  },
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max (profil fotoğrafı için yeterli)
+    files: 1,
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      cb(new Error('Sadece resim dosyalari yuklenebilir (jpg, png, gif, webp)'));
+      return;
+    }
+
+    // Uzantı kontrolü
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    if (!allowedExts.includes(ext)) {
+      cb(new Error('Geçersiz dosya uzantısı'));
+      return;
+    }
+
+    cb(null, true);
+  },
+});
+
+// Avatar yukle - Tüm authenticated kullanıcılar için (STUDENT dahil)
+router.post(
+  '/avatar',
+  uploadLimiter,
+  authenticate,
+  // authorize yok - tüm kullanıcılar erişebilir
+  avatarUpload.single('avatar'),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'Resim dosyasi yuklenmedi' });
+      }
+
+      const filePath = req.file.path;
+
+      // Magic byte doğrulaması
+      const isValidFile = await verifyMagicBytes(filePath, req.file.mimetype);
+      if (!isValidFile) {
+        // Geçersiz dosyayı sil
+        fs.unlinkSync(filePath);
+        return res.status(400).json({
+          success: false,
+          error: 'Dosya içeriği belirtilen türle eşleşmiyor. Güvenlik nedeniyle reddedildi.'
+        });
+      }
+
+      const imageUrl = `/uploads/avatars/${req.file.filename}`;
+
+      res.json({
+        success: true,
+        data: {
+          filename: req.file.filename,
+          originalName: sanitizeFilename(req.file.originalname),
+          url: imageUrl,
+        },
+      });
+    } catch (error) {
+      // Hata durumunda yüklenen dosyayı temizle
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      next(error);
+    }
+  }
+);
+
 // Yuklenen dosyalari listele
 router.get(
   '/videos',
