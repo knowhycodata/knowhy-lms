@@ -1,0 +1,201 @@
+// Knowhy LMS - Prisma Schema
+// PostgreSQL veritabanı şeması
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VideoType {
+  VIDEO_LOCAL
+  VIDEO_YOUTUBE
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       Role     @default(STUDENT)
+  department String?
+  avatar     String?
+  isActive   Boolean  @default(true)
+  status     UserStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // İlişkiler
+  courses     Course[]     @relation("InstructorCourses")
+  enrollments Enrollment[]
+  progress    Progress[]
+  comments    Comment[]
+
+  @@index([email])
+  @@index([role])
+  @@index([department])
+  @@index([status])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // İlişkiler
+  instructorId String
+  instructor   User         @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
+  modules      Module[]
+  enrollments  Enrollment[]
+
+  @@index([instructorId])
+  @@index([isPublished])
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // İlişkiler
+  courseId String
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+
+  @@index([courseId])
+  @@index([order])
+}
+
+model Lesson {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  order        Int       @default(0)
+  videoType    VideoType
+  videoUrl     String    // Lokal path veya YouTube ID
+  duration     Int       @default(0) // Saniye cinsinden
+  thumbnailUrl String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // İlişkiler
+  moduleId    String
+  module      Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    Progress[]
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@index([moduleId])
+  @@index([order])
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  // İlişkiler
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model Progress {
+  id                  String    @id @default(cuid())
+  lastWatchedSecond   Int       @default(0)
+  totalWatchedSeconds Int       @default(0)
+  isCompleted         Boolean   @default(false)
+  completedAt         DateTime?
+  updatedAt           DateTime  @updatedAt
+
+  // İlişkiler
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([isCompleted])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  timestamp Int?     // Video saniyesi (opsiyonel)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // İlişkiler
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  // Yanıt ilişkisi (self-relation)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([lessonId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([parentId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String   // Sunucudaki dosya adı
+  originalName String   // Orijinal dosya adı
+  mimeType     String
+  size         Int      // Byte cinsinden
+  createdAt    DateTime @default(now())
+
+  // İlişkiler
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+// Sistem Ayarları - Key-Value store
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON string olarak saklanır
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
