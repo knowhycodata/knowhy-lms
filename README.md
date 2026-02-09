@@ -253,7 +253,7 @@ Aşağıdaki ekran görüntüleri `platform/` klasöründen alınmıştır.
 
 ```bash
 # 1. Projeyi klonlayın
-git clone https://github.com/your-username/knowhy-lms.git
+git clone https://github.com/knowhycodata/knowhy-lms.git
 cd knowhy-lms
 
 # 2. Environment dosyasını oluşturun
